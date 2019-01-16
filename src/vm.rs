@@ -90,6 +90,70 @@ impl VM {
                 let value = self.registers[self.next_8_bits() as usize] as usize;
                 self.pc -= value;
             }
+            Opcode::EQ => {
+                let register1 = self.registers[self.next_8_bits() as usize];
+                let register2 = self.registers[self.next_8_bits() as usize];
+                let result = self.next_8_bits() as usize;
+                if register1 == register2 {
+                    self.registers[result] = 1;
+                } else {
+                    self.registers[result] = 0;
+                }
+            }
+            Opcode::NEQ => {
+                let register1 = self.registers[self.next_8_bits() as usize];
+                let register2 = self.registers[self.next_8_bits() as usize];
+                let result = self.next_8_bits() as usize;
+                if register1 != register2 {
+                    self.registers[result] = 1;
+                } else {
+                    self.registers[result] = 0;
+                }
+            }
+            Opcode::GT => {
+                let register1 = self.registers[self.next_8_bits() as usize];
+                let register2 = self.registers[self.next_8_bits() as usize];
+                let result = self.next_8_bits() as usize;
+                if register1 > register2 {
+                    self.registers[result] = 1;
+                } else {
+                    self.registers[result] = 0;
+                }
+            }
+            Opcode::LT => {
+                let register1 = self.registers[self.next_8_bits() as usize];
+                let register2 = self.registers[self.next_8_bits() as usize];
+                let result = self.next_8_bits() as usize;
+                if register1 < register2 {
+                    self.registers[result] = 1;
+                } else {
+                    self.registers[result] = 0;
+                }
+            }
+            Opcode::GTQ => {
+                let register1 = self.registers[self.next_8_bits() as usize];
+                let register2 = self.registers[self.next_8_bits() as usize];
+                let result = self.next_8_bits() as usize;
+                if register1 >= register2 {
+                    self.registers[result] = 1;
+                } else {
+                    self.registers[result] = 0;
+                }
+            }
+            Opcode::LTQ => {
+                let register1 = self.registers[self.next_8_bits() as usize];
+                let register2 = self.registers[self.next_8_bits() as usize];
+                let result = self.next_8_bits() as usize;
+                if register1 <= register2 {
+                    self.registers[result] = 1;
+                } else {
+                    self.registers[result] = 0;
+                }
+            }
+            Opcode::JEQ => {
+                let value = self.registers[self.next_8_bits() as usize] as usize;
+                self.pc -= value;
+            }
             Opcode::HLT => {
                 println!("HLT encountered");
                 return false;
@@ -142,8 +206,21 @@ mod tests {
     fn test_jmpf_opcode() {
         let mut test_vm = VM::new();
         test_vm.registers[0] = 2;
-        test_vm.program = vec![8, 0, 0, 0, 6, 0, 0, 0];
+        test_vm.program = vec![7, 0, 0, 0, 6, 0, 0, 0];
         test_vm.run_once();
         assert_eq!(test_vm.pc, 4);
+    }
+
+    #[test]
+    fn test_eq_opcode() {
+        let mut test_vm = VM::new();
+        test_vm.registers[0] = 10;
+        test_vm.registers[1] = 10;
+        test_vm.program = vec![9, 0, 1, 2, 9, 0, 1, 2];
+        test_vm.run_once();
+        assert_eq!(test_vm.registers[2], 1);
+        test_vm.registers[1] = 20;
+        test_vm.run_once();
+        assert_eq!(test_vm.registers[2], 0);
     }
 }

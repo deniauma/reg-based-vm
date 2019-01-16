@@ -9,6 +9,13 @@ pub enum Opcode {
   JMP,
   JMPF,
   JMPB,
+  EQ,     //equal
+  NEQ,    //non equal
+  GT,     //greater than
+  LT,     //lesser than
+  GTQ,    //greater or equal
+  LTQ,    //lesser or equal
+  JEQ,    //jump if equal
   IGL
 }
 
@@ -21,9 +28,16 @@ impl From<u8> for Opcode {
             3 => return Opcode::SUB,
             4 => return Opcode::MUL,
             5 => return Opcode::DIV,
-            6 => return Opcode::DIV,
-            7 => return Opcode::DIV,
-            8 => return Opcode::DIV,
+            6 => return Opcode::JMP,
+            7 => return Opcode::JMPF,
+            8 => return Opcode::JMPB,
+            9 => return Opcode::EQ,
+            10 => return Opcode::NEQ,
+            11 => return Opcode::GT,
+            12 => return Opcode::LT,
+            13 => return Opcode::GTQ,
+            14 => return Opcode::LTQ,
+            15 => return Opcode::JEQ,
             _ => return Opcode::IGL
         }
     }
