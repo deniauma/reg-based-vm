@@ -151,8 +151,11 @@ impl VM {
                 }
             }
             Opcode::JEQ => {
-                let value = self.registers[self.next_8_bits() as usize] as usize;
-                self.pc -= value;
+                let target = self.registers[self.next_8_bits() as usize];
+                let compare_value = self.registers[self.next_8_bits() as usize];
+                if compare_value == 1 {
+                    self.pc = target as usize;
+                }
             }
             Opcode::HLT => {
                 println!("HLT encountered");
