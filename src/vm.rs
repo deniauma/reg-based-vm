@@ -4,7 +4,7 @@ pub struct VM {
     registers: [i32; 32],
     pc: usize,
     program: Vec<u8>,
-    remainder: u32
+    remainder: u32,
 }
 
 impl VM {
@@ -13,7 +13,7 @@ impl VM {
             registers: [0; 32],
             pc: 0,
             program: vec![],
-            remainder: 0
+            remainder: 0,
         }
     }
 
@@ -78,6 +78,18 @@ impl VM {
                 self.registers[self.next_8_bits() as usize] = register1 + register2;
                 self.remainder = (register1 % register2) as u32;
             }
+            Opcode::JMP => {
+                let target = self.registers[self.next_8_bits() as usize];
+                self.pc = target as usize;
+            }
+            Opcode::JMPF => {
+                let value = self.registers[self.next_8_bits() as usize] as usize;
+                self.pc += value;
+            }
+            Opcode::JMPB => {
+                let value = self.registers[self.next_8_bits() as usize] as usize;
+                self.pc -= value;
+            }
             Opcode::HLT => {
                 println!("HLT encountered");
                 return false;
@@ -124,5 +136,14 @@ mod tests {
         test_vm.program = vec![1, 0, 1, 244]; // Remember, this is how we represent 500 using two u8s in little endian format
         test_vm.run_once();
         assert_eq!(test_vm.registers[0], 500);
+    }
+
+    #[test]
+    fn test_jmpf_opcode() {
+        let mut test_vm = VM::new();
+        test_vm.registers[0] = 2;
+        test_vm.program = vec![8, 0, 0, 0, 6, 0, 0, 0];
+        test_vm.run_once();
+        assert_eq!(test_vm.pc, 4);
     }
 }
