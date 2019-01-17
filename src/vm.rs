@@ -155,6 +155,8 @@ impl VM {
                 let compare_value = self.registers[self.next_8_bits() as usize];
                 if compare_value == 1 {
                     self.pc = target as usize;
+                } else {
+                    self.next_8_bits();
                 }
             }
             Opcode::HLT => {
@@ -225,5 +227,20 @@ mod tests {
         test_vm.registers[1] = 20;
         test_vm.run_once();
         assert_eq!(test_vm.registers[2], 0);
+    }
+
+    #[test]
+    fn test_jeq_opcode() {
+        let mut test_vm = VM::new();
+        test_vm.registers[0] = 7;
+        test_vm.registers[1] = 1;
+        test_vm.program = vec![15, 0, 1, 2, 15, 0, 1, 2];
+        test_vm.run_once();
+        assert_eq!(test_vm.pc, 7);
+        test_vm.pc = 4;
+        test_vm.registers[1] = 0;
+        test_vm.run_once();
+        println!("{}", test_vm.pc);
+        assert_eq!(test_vm.pc, 8);
     }
 }
