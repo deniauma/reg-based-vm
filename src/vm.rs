@@ -1,9 +1,9 @@
 use crate::instruction::Opcode;
 
 pub struct VM {
-    registers: [i32; 32],
+    pub registers: [i32; 32],
     pc: usize,
-    program: Vec<u8>,
+    pub program: Vec<u8>,
     remainder: u32,
 }
 
@@ -15,6 +15,10 @@ impl VM {
             program: vec![],
             remainder: 0,
         }
+    }
+
+    pub fn add_program_byte(&mut self, byte: u8) {
+        self.program.push(byte);
     }
 
     fn decode_opcode(&mut self) -> Opcode {
