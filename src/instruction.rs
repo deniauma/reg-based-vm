@@ -1,4 +1,4 @@
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Copy, Clone)]
 pub enum Opcode {
   HLT,
   LOAD,
@@ -41,6 +41,15 @@ impl From<u8> for Opcode {
             _ => return Opcode::IGL
         }
     }
+}
+
+impl From<&str> for Opcode {
+  fn from(v: &str) -> Self {
+    match v {
+      "load" => return Opcode::LOAD,
+      _ => return Opcode::IGL
+    }
+  }
 }
 
 #[derive(Debug, PartialEq)]
