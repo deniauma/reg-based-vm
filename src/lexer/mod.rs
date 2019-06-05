@@ -1,5 +1,4 @@
 use crate::instruction;
-use std::collections::HashMap;
 use regex::Regex;
 
 
@@ -8,6 +7,16 @@ pub enum TokenType {
     Opcode,
     Register,
     IntegerOperand,
+}
+
+impl From<Token> for TokenType {
+    fn from(v: Token) -> Self {
+        match v {
+            Token::Opcode(_op) => return TokenType::Opcode,
+            Token::Register(_r) => return TokenType::Register,
+            Token::IntegerOperand(_) => return TokenType::IntegerOperand
+        }
+    }
 }
 
 
@@ -44,25 +53,90 @@ pub struct AssemblerInstruction {
 }
 
 
+#[derive(Debug, PartialEq, Copy, Clone)]
+pub struct AssemblerInstructionRule {
+    opcode: instruction::Opcode,
+    arg1: Option<TokenType>,
+    arg2: Option<TokenType>,
+    arg3: Option<TokenType>,
+}
+
+impl AssemblerInstructionRule {
+    pub fn new(op: instruction::Opcode, arg1: Option<TokenType>, arg2: Option<TokenType>, arg3: Option<TokenType>) -> Self {
+        Self {
+            opcode: op,
+            arg1: arg1,
+            arg2: arg2,
+            arg3: arg3,
+        }
+    }
+
+    pub fn is_match(&self, inst: AssemblerInstruction) -> bool {
+        // test the opcode
+        match inst.opcode {
+            Token::Opcode(opc) => {
+                if opc != self.opcode {
+                    return false
+                }
+            },
+            _ => return false
+        };
+        
+        // test the arg1 type 
+        if !Self::compare_token(inst.arg1, self.arg1) {
+            return false
+        }
+
+        // test the arg2 type 
+        if !Self::compare_token(inst.arg2, self.arg2) {
+            return false
+        }
+
+        // test the arg3 type 
+        if !Self::compare_token(inst.arg3, self.arg3) {
+            return false
+        }
+
+        true
+    }
+
+    fn compare_token(token: Option<Token>, token_type: Option<TokenType>) -> bool {
+        if token.is_none() != token_type.is_none() {
+            return false
+        }
+        if token.is_none() {
+            return true
+        }
+        let a = TokenType::from(token.unwrap());
+        let b = token_type.unwrap();
+        return a == b
+    }
+}
+
+
 #[derive(Debug)]
 pub struct Grammar {
-    pub rules: HashMap<String, TokenType>,
-    pub terminal_rules: Vec<TokenTypeRegex>
+    pub terminal_rules: Vec<TokenTypeRegex>,
+    pub instruction_rules: Vec<AssemblerInstructionRule>
 }
 
 impl Grammar {
     pub fn new() -> Self {
         Self {
-            rules: HashMap::new(),
-            terminal_rules: vec!()
+            terminal_rules: vec!(),
+            instruction_rules: vec!()
         }
     }
 
     pub fn add_rule(&mut self, src: &str, token_type: TokenType) {
-        self.rules.insert(src.to_string(), token_type);
         self.terminal_rules.push(TokenTypeRegex::new(token_type, src));
     }
+
+    pub fn add_intruction_rule(&mut self, rule: AssemblerInstructionRule) {
+        self.instruction_rules.push(rule);
+    }
 }
+
 
 #[derive(Debug)]
 pub struct Lexer {
@@ -74,6 +148,15 @@ impl Lexer {
         Self {
             grammar: build_grammar()
         }
+    }
+
+    pub fn match_instruction(&self, inst: AssemblerInstruction) -> bool {
+        for rule in &self.grammar.instruction_rules {
+            if rule.is_match(inst) {
+                return true
+            }
+        }
+        false
     }
 
     pub fn parse_instruction(&self, inst: &str) -> Result<AssemblerInstruction, String> {
@@ -151,6 +234,7 @@ pub fn build_grammar() -> Grammar {
     grammar.add_rule(r"(?P<op>[a-z]+)", TokenType::Opcode);
     grammar.add_rule(r"\$(?P<reg>\d{1,2})", TokenType::Register);
     grammar.add_rule(r"\#(?P<intop>\d+)", TokenType::IntegerOperand);
+    grammar.add_intruction_rule(AssemblerInstructionRule::new(instruction::Opcode::LOAD, Some(TokenType::Register), Some(TokenType::IntegerOperand), None));
     grammar 
 }
 
@@ -189,5 +273,12 @@ mod tests {
             arg3: None
         }));
         assert!(lex.parse_instruction("load load $2 $1 #100").is_err());
+    }
+
+    #[test]
+    fn test_rule_load() {
+        let lex = Lexer::new();
+        let inst = lex.parse_instruction("load $1 #100").unwrap();
+        assert!(lex.match_instruction(inst));
     }
 }
