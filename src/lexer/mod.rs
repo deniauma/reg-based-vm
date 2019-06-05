@@ -35,6 +35,7 @@ pub enum Token {
 }
 
 
+#[derive(Debug, PartialEq, Copy, Clone)]
 pub struct AssemblerInstruction {
     opcode: Token,
     arg1: Option<Token>,
@@ -43,6 +44,7 @@ pub struct AssemblerInstruction {
 }
 
 
+#[derive(Debug)]
 pub struct Grammar {
     pub rules: HashMap<String, TokenType>,
     pub terminal_rules: Vec<TokenTypeRegex>
@@ -60,28 +62,87 @@ impl Grammar {
         self.rules.insert(src.to_string(), token_type);
         self.terminal_rules.push(TokenTypeRegex::new(token_type, src));
     }
+}
 
-    pub fn parse_str(&self, src: &str) -> Option<Token> {
-        for t in &self.terminal_rules {
+#[derive(Debug)]
+pub struct Lexer {
+    grammar: Grammar
+}
+
+impl Lexer {
+    pub fn new() -> Self {
+        Self {
+            grammar: build_grammar()
+        }
+    }
+
+    pub fn parse_instruction(&self, inst: &str) -> Result<AssemblerInstruction, String> {
+        let args: Vec<&str> = inst.split(" ").collect();
+        let mut tokens: Vec<Token> = vec!();
+        if args.len() > 4 {
+            return Err(format!("Invalid instrcution, too many arguments (for '{}')", inst))
+        }
+        if args.len() == 0 {
+            match self.parse_str(inst) {
+                Ok(t) => {
+                    tokens.push(t);
+                },
+                Err(e) => return Err(format!("No matching instruction for '{}' ({})", inst, e))
+            }
+        }
+        else {
+            for arg in &args {
+                match self.parse_str(arg) {
+                    Ok(t) => {
+                        tokens.push(t);
+                    },
+                    Err(e) => return Err(format!("No matching instruction for '{}' ({})", inst, e))
+                }
+            }
+        }
+        let opcode = *tokens.get(0).unwrap();
+        let arg1 = match tokens.get(1) {
+            Some(&t) => Some(t),
+            None => None
+        };
+        let arg2 = match tokens.get(2) {
+            Some(&t) => Some(t),
+            None => None
+        };
+        let arg3 = match tokens.get(3) {
+            Some(&t) => Some(t),
+            None => None
+        };
+        Ok(AssemblerInstruction {
+            opcode: opcode,
+            arg1: arg1,
+            arg2: arg2,
+            arg3: arg3
+        })
+        
+    }
+
+    pub fn parse_str(&self, src: &str) -> Result<Token, String> {
+        for t in &self.grammar.terminal_rules {
             if t.regex.is_match(src) {
                 match t.token_type {
                     TokenType::Opcode => {
                         let opcode = t.regex.captures(src).unwrap().name("op").unwrap().as_str();
                         let op = Token::Opcode(instruction::Opcode::from(opcode));
-                        return Some(op)
+                        return Ok(op)
                     },
                     TokenType::Register => {
                         let n: u8 = t.regex.captures(src).unwrap().name("reg").unwrap().as_str().parse().unwrap();
-                        return Some(Token::Register(n))
+                        return Ok(Token::Register(n))
                     },
                     TokenType::IntegerOperand => {
                         let i: i32 = t.regex.captures(src).unwrap().name("intop").unwrap().as_str().parse().unwrap();
-                        return Some(Token::IntegerOperand(i))
+                        return Ok(Token::IntegerOperand(i))
                     },
                 }
             }
         }
-        None
+        Err(format!("No matching token for '{}'", src))
     }
 }
 
@@ -99,22 +160,34 @@ mod tests {
 
     #[test]
     fn test_opcode_load() {
-        let grammar = build_grammar();
-        assert_eq!(grammar.parse_str("load"), Some(Token::Opcode(instruction::Opcode::LOAD)));
-        assert_eq!(grammar.parse_str("123"), None);
+        let lex = Lexer::new();
+        assert_eq!(lex.parse_str("load"), Ok(Token::Opcode(instruction::Opcode::LOAD)));
+        assert!(lex.parse_str("123").is_err());
     }
 
     #[test]
     fn test_register() {
-        let grammar = build_grammar();
-        assert_eq!(grammar.parse_str("$1"), Some(Token::Register(1)));
-        assert_eq!(grammar.parse_str("$"), None);
+        let lex = Lexer::new();
+        assert_eq!(lex.parse_str("$1"), Ok(Token::Register(1)));
+        assert!(lex.parse_str("$").is_err());
     }
 
     #[test]
     fn test_integer_operand() {
-        let grammar = build_grammar();
-        assert_eq!(grammar.parse_str("#100"), Some(Token::IntegerOperand(100)));
-        assert_eq!(grammar.parse_str("#"), None);
+        let lex = Lexer::new();
+        assert_eq!(lex.parse_str("#100"), Ok(Token::IntegerOperand(100)));
+        assert!(lex.parse_str("#").is_err());
+    }
+
+    #[test]
+    fn test_load_instruction() {
+        let lex = Lexer::new();
+        assert_eq!(lex.parse_instruction("load $1 #100"), Ok(AssemblerInstruction {
+            opcode: Token::Opcode(instruction::Opcode::LOAD),
+            arg1: Some(Token::Register(1)),
+            arg2: Some(Token::IntegerOperand(100)),
+            arg3: None
+        }));
+        assert!(lex.parse_instruction("load load $2 $1 #100").is_err());
     }
 }
