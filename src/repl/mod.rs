@@ -2,6 +2,7 @@ use std;
 use std::io;
 use std::io::Write;
 use crate::vm::VM;
+use crate::lexer::Lexer;
 
 /// Core structure for the REPL for the Assembler
 pub struct REPL {
@@ -60,13 +61,22 @@ impl REPL {
                     println!("End of Register Listing")
                 },
                 _ => {
-                    match self.parse_hex(buffer) {
+                    /* match self.parse_hex(buffer) {
                         Ok(bytes) => {
                             for b in bytes {
                                 self.vm.add_program_byte(b);
                             }
                         },
                         Err(_) => println!("Unable to parse hex string (it should be 4 bytes).")
+                    } */
+                    let lex = Lexer::new();
+                    match lex.parse_instruction(buffer).unwrap().compile() {
+                        Ok(bytes) => {
+                            for byte in bytes {
+                                self.vm.add_program_byte(byte);
+                            }
+                        },
+                        Err(e) => println!("Unable to parse the instruction! ({})", e)
                     }
                     self.vm.run_once();
                 }

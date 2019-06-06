@@ -52,6 +52,56 @@ pub struct AssemblerInstruction {
     arg3: Option<Token>,
 }
 
+impl AssemblerInstruction {
+    pub fn compile(&self) -> Result<Vec<u8>, String> {
+        let mut result: Vec<u8> = vec!();
+        let op = match self.opcode {
+            Token::Opcode(o) => o as u8,
+            _ => return Err(format!("No opcode found!"))
+        };
+        result.push(op);
+        match self.arg1 {
+            Some(a) => {
+                let mut bytes = Self::compile_token(a);
+                result.append(&mut bytes);
+            }
+            None => ()
+        }
+        match self.arg2 {
+            Some(a) => {
+                let mut bytes = Self::compile_token(a);
+                result.append(&mut bytes);
+            }
+            None => ()
+        }
+        match self.arg3 {
+            Some(a) => {
+                let mut bytes = Self::compile_token(a);
+                result.append(&mut bytes);
+            }
+            None => ()
+        }
+
+        Ok(result)
+    }
+
+    fn compile_token(arg: Token) -> Vec<u8> {
+        let mut result: Vec<u8> = vec!();
+        match arg {
+            Token::Opcode(op) => result.push(op as u8),
+            Token::Register(reg) => result.push(reg),
+            Token::IntegerOperand(i) => {
+                let nb = i as u16;
+                let byte1 = (nb >> 8) as u8;
+                let byte2 = nb as u8;
+                result.push(byte1);
+                result.push(byte2);
+            },
+        };
+        result
+    }
+}
+
 
 #[derive(Debug, PartialEq, Copy, Clone)]
 pub struct AssemblerInstructionRule {
@@ -280,5 +330,14 @@ mod tests {
         let lex = Lexer::new();
         let inst = lex.parse_instruction("load $1 #100").unwrap();
         assert!(lex.match_instruction(inst));
+    }
+
+    #[test]
+    fn test_compile_instruction() {
+        let lex = Lexer::new();
+        let inst = lex.parse_instruction("load $1 #100").unwrap();
+        let vec1: Vec<u8> = vec![1, 1, 0, 100];
+        let vec2 = inst.compile().unwrap();
+        assert_eq!(vec1, vec2);
     }
 }
