@@ -2,6 +2,7 @@ use crate::instruction::Opcode;
 
 pub struct VM {
     pub registers: [i32; 32],
+    heap: [u8; 1000],
     pc: usize,
     pub program: Vec<u8>,
     remainder: u32,
@@ -11,6 +12,7 @@ impl VM {
     pub fn new() -> VM {
         VM {
             registers: [0; 32],
+            heap: [0; 1000],
             pc: 0,
             program: vec![],
             remainder: 0,
@@ -37,6 +39,27 @@ impl VM {
         let result = ((self.program[self.pc] as u16) << 8) | self.program[self.pc + 1] as u16;
         self.pc += 2;
         return result;
+    }
+
+    fn load_word_from_heap(&self, addr: usize) -> Result<u32, String> {
+        match self.heap.get(addr..addr+4) {
+            Some(v) => {
+                let result: u32 = ((v[0] as u32) << 3*8) | ((v[1] as u32) << 2*8) | ((v[2] as u32) << 8) | v[3] as u32;
+                Ok(result)
+            }
+            None => Err(format!("Error, memory addr ({}) is out of bounds!", addr))
+        }
+    }
+
+    fn store_word_into_heap(&mut self, value: i32, addr: usize) {
+        let mut bytes: Vec<u8> = vec!();
+        bytes.push((value >> 24) as u8);
+        bytes.push((value >> 16) as u8);
+        bytes.push((value >> 8) as u8);
+        bytes.push(value as u8);
+        for i in 0..4 {
+            self.heap[addr + i] = bytes[i];
+        }
     }
 
     pub fn run(&mut self) {
@@ -163,6 +186,18 @@ impl VM {
                     self.next_8_bits();
                 }
             }
+            Opcode::LW => { // lw $1, 100($2)
+                let reg_dst = self.next_8_bits() as usize;
+                let addr = self.registers[self.next_8_bits() as usize] as usize;
+                let offset = self.next_8_bits() as usize;
+                self.registers[reg_dst] = self.load_word_from_heap(addr + offset).unwrap() as i32;
+            }
+            Opcode::SW => { // sw $1, 100($2)
+                let value = self.registers[self.next_8_bits() as usize];
+                let addr = self.registers[self.next_8_bits() as usize] as usize;
+                let offset = self.next_8_bits() as usize;
+                self.store_word_into_heap(value, addr + offset);
+            }
             Opcode::HLT => {
                 println!("HLT encountered");
                 return false;
@@ -246,5 +281,17 @@ mod tests {
         test_vm.run_once();
         println!("{}", test_vm.pc);
         assert_eq!(test_vm.pc, 8);
+    }
+
+    #[test]
+    fn test_lw_sw_opcodes() {
+        let mut test_vm = VM::new();
+        test_vm.registers[1] = 1589;
+        test_vm.registers[2] = 32;
+        test_vm.program = vec![17, 1, 2, 8, 16, 3, 2, 8]; // sw $1, 8($2) then lw $3, 8($2)
+        test_vm.run_once();
+        assert_eq!(test_vm.registers[3], 0);
+        test_vm.run_once();
+        assert_eq!(test_vm.registers[3], 1589);
     }
 }

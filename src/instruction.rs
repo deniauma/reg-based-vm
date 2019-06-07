@@ -16,6 +16,8 @@ pub enum Opcode {
   GTQ,    //greater or equal
   LTQ,    //lesser or equal
   JEQ,    //jump if equal
+  LW,
+  SW,
   IGL
 }
 
@@ -38,6 +40,8 @@ impl From<u8> for Opcode {
             13 => return Opcode::GTQ,
             14 => return Opcode::LTQ,
             15 => return Opcode::JEQ,
+            16 => return Opcode::LW,
+            17 => return Opcode::SW,
             _ => return Opcode::IGL
         }
     }
@@ -46,7 +50,24 @@ impl From<u8> for Opcode {
 impl From<&str> for Opcode {
   fn from(v: &str) -> Self {
     match v {
+      "hlt" => return Opcode::HLT,
       "load" => return Opcode::LOAD,
+      "add" => return Opcode::ADD,
+      "sub" => return Opcode::SUB,
+      "mul" => return Opcode::MUL,
+      "div" => return Opcode::DIV,
+      "jmp" => return Opcode::JMP,
+      "jmpf" => return Opcode::JMPF,
+      "lmpb" => return Opcode::JMPB,
+      "eq" => return Opcode::EQ,
+      "neq" => return Opcode::NEQ,
+      "gt" => return Opcode::GT,
+      "lt" => return Opcode::LT,
+      "gtq" => return Opcode::GTQ,
+      "ltq" => return Opcode::LTQ,
+      "jeq" => return Opcode::JEQ,
+      "lw" => return Opcode::LW,
+      "sw" => return Opcode::SW,
       _ => return Opcode::IGL
     }
   }
